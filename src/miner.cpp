@@ -518,9 +518,14 @@ CBlockTemplate* CreateNewPoABlock(const CScript& scriptPubKeyIn, const CPubKey& 
     std::unique_ptr<CBlockTemplate> pblocktemplate(new CBlockTemplate());
     if (!pblocktemplate.get())
         return NULL;
+
     CBlock* pblock = &pblocktemplate->block; // pointer for convenience
 
-    pblock->SetNull();
+    pblock->SetNull(); // Is this required?
+
+    // Set block version to differentiate PoA blocks from PoS blocks
+    pblock->SetVersionPoABlock();
+
     // Create coinbase tx
     CMutableTransaction txNew;
     txNew.vin.resize(1);
@@ -539,19 +544,17 @@ CBlockTemplate* CreateNewPoABlock(const CScript& scriptPubKeyIn, const CPubKey& 
     boost::this_thread::interruption_point();
     pblock->nTime = GetAdjustedTime();
     CBlockIndex* pindexPrev = chainActive.Tip();
+
+    //ATTENTION: This is used for setting always the easiest difficulty for PoA miners
     pblock->nBits = GetNextWorkRequired(pindexPrev, pblock);
+    pblock->nNonce = 0;
 
     int nprevPoAHeight;
-
     nprevPoAHeight = GetListOfPoSInfo(pindexPrev->nHeight, pblock->posBlocksAudited);
 
     if (pblock->posBlocksAudited.size() == 0) {
         return NULL;
     }
-
-    // Set block version to differentiate PoA blocks from PoS blocks
-    pblock->SetVersionPoABlock();
-    pblock->nTime = GetAdjustedTime();
 
     //compute PoA block reward
     CAmount nReward;
@@ -572,7 +575,6 @@ CBlockTemplate* CreateNewPoABlock(const CScript& scriptPubKeyIn, const CPubKey& 
         LogPrintf("%s: unable to create commitment to 0\n", __func__);
         return NULL;
     }
-    pwallet->EncodeTxOutAmount(pblock->vtx[0].vout[0], pblock->vtx[0].vout[0].nValue, sharedSec.begin());
 
     //Comment out all previous code, because a PoA block does not verify any transaction, except reward transactions to miners
     // No need to collect memory pool transactions into the block
@@ -584,11 +586,7 @@ CBlockTemplate* CreateNewPoABlock(const CScript& scriptPubKeyIn, const CPubKey& 
         pblock->hashPrevPoABlock = *(chainActive[nprevPoAHeight]->phashBlock);
     } else {
         pblock->hashPrevPoABlock.SetNull();
-    }
-
-    //ATTENTION: This is used for setting always the easiest difficulty for PoA miners
-    pblock->nBits = GetNextWorkRequired(pindexPrev, pblock);
-    pblock->nNonce = 0;
+    }   
 
     pblocktemplate->vTxSigOps[0] = GetLegacySigOpCount(pblock->vtx[0]);
 
