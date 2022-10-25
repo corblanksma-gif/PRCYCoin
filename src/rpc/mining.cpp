@@ -766,55 +766,12 @@ UniValue getpoablocktemplate(const UniValue& params, bool fHelp)
             pindexPrev = pindexPrevNew;
         }
         CBlock* pblock = &pblocktemplate->block; // pointer for convenience
-
-        // Update nTime: I don't think time is necessary for PoA miners here
-        UpdateTime(pblock, pindexPrev);
         pblock->nNonce = 0;
-
-        UniValue transactions(UniValue::VARR);
-        std::map<uint256, int64_t> setTxIndex;
-        int i = 0;
-        for (CTransaction& tx : pblock->vtx) {
-            uint256 txHash = tx.GetHash();
-            setTxIndex[txHash] = i++;
-
-            if (tx.IsCoinBase())
-                continue;
-
-            UniValue entry(UniValue::VOBJ);
-
-            entry.push_back(Pair("data", EncodeHexTx(tx)));
-
-            entry.push_back(Pair("hash", txHash.GetHex()));
-
-            UniValue deps(UniValue::VARR);
-            for (const CTxIn& in : tx.vin) {
-                if (setTxIndex.count(in.prevout.hash))
-                    deps.push_back(setTxIndex[in.prevout.hash]);
-            }
-            entry.push_back(Pair("depends", deps));
-
-            int index_in_template = i - 1;
-            entry.push_back(Pair("fee", pblocktemplate->vTxFees[index_in_template]));
-            entry.push_back(Pair("sigops", pblocktemplate->vTxSigOps[index_in_template]));
-
-            transactions.push_back(entry);
-        }
 
         UniValue coinbasetxn(UniValue::VOBJ);
         CTransaction& tx = pblock->vtx[0];
         coinbasetxn.push_back(Pair("data", EncodeHexTx(tx)));
         coinbasetxn.push_back(Pair("hash", tx.GetHash().GetHex()));
-
-        UniValue aux(UniValue::VOBJ);
-        aux.push_back(Pair("flags", HexStr(COINBASE_FLAGS.begin(), COINBASE_FLAGS.end())));
-
-        UniValue aMutable(UniValue::VARR);
-        if (aMutable.empty()) {
-            aMutable.push_back("time");
-            aMutable.push_back("transactions");
-            aMutable.push_back("prevblock");
-        }
 
         //Information about PoS blocks to be audited
         UniValue posBlocksAudited(UniValue::VARR);
@@ -834,7 +791,6 @@ UniValue getpoablocktemplate(const UniValue& params, bool fHelp)
         result.push_back(Pair("version", pblock->nVersion));
         result.push_back(Pair("previouspoablockhash", pblock->hashPrevPoABlock.GetHex()));
         result.push_back(Pair("poamerkleroot", poaMerkleRoot.GetHex()));
-        result.push_back(Pair("transactions", transactions));
         result.push_back(Pair("coinbasetxn", coinbasetxn));
         result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0].GetValueOut()));
         result.push_back(Pair("noncerange", "00000000ffffffff"));
