@@ -619,8 +619,11 @@ bool VerifyRingSignatureWithTxFee(const CTransaction& tx, CBlockIndex* pindex)
 
 bool ReVerifyPoSBlock(CBlockIndex* pindex)
 {
+    LogPrintf("%s: Locking cs_main.... again?\n", __func__);
     LOCK(cs_main);
+    LogPrintf("%s: Locked cs_main.... again?\n", __func__);
     {
+        LogPrintf("%s: Starting\n", __func__);
         if (!pindex) return false;
         CBlock block;
         if (!ReadBlockFromDisk(block, pindex)) return false;
@@ -674,7 +677,9 @@ bool ReVerifyPoSBlock(CBlockIndex* pindex)
             return false;
         }
         return true;
+        LogPrintf("%s: Ending\n", __func__);
     }
+    LogPrintf("%s: Outside the lock\n", __func__);
 }
 
 uint256 GetTxSignatureHash(const CTransaction& tx)
