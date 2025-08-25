@@ -46,7 +46,7 @@ jobs:
       run: |
         mv depends.tar.gz prcycoin.tar.gz $ARTIFACT_DIR
     - name: Upload Artifact
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: ${{ env.SOURCE_ARTIFACT }}
         path: ${{ env.ARTIFACT_DIR }}
@@ -99,7 +99,7 @@ jobs:
         chmod +x $SOURCE_ARTIFACT/src/{prcycoin-cli,prcycoin-tx,prcycoind,qt/prcycoin-qt}
         mv $SOURCE_ARTIFACT/src/{prcycoin-cli,prcycoin-tx,prcycoind,qt/prcycoin-qt} $ARTIFACT_DIR
     - name: Upload Artifact
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: prcycoin-v${{ env.VERSION }}-linux
         path: ${{ env.ARTIFACT_DIR }}
@@ -151,7 +151,7 @@ jobs:
         chmod +x $SOURCE_ARTIFACT/src/{prcycoin-cli,prcycoin-tx,prcycoind,qt/prcycoin-qt}
         mv $SOURCE_ARTIFACT/src/{prcycoin-cli,prcycoin-tx,prcycoind,qt/prcycoin-qt} $ARTIFACT_DIR
     - name: Upload Artifact
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: prcycoin-v${{ env.VERSION }}-x86_64-linux
         path: ${{ env.ARTIFACT_DIR }}
@@ -206,7 +206,7 @@ jobs:
         strip $SOURCE_ARTIFACT/src/{prcycoin-cli.exe,prcycoin-tx.exe,prcycoind.exe,qt/prcycoin-qt.exe}
         mv $SOURCE_ARTIFACT/{prcycoin-*.exe,src/prcycoin-cli.exe,src/prcycoin-tx.exe,src/prcycoind.exe,src/qt/prcycoin-qt.exe} $ARTIFACT_DIR
     - name: Upload Artifact
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: prcycoin-v${{ env.VERSION }}-win64
         path: ${{ env.ARTIFACT_DIR }}
@@ -275,7 +275,7 @@ jobs:
         mkdir -p $ARTIFACT_DIR
         mv $SOURCE_ARTIFACT/{*.dmg,src/prcycoin-cli,src/prcycoin-tx,src/prcycoind,src/qt/prcycoin-qt} $ARTIFACT_DIR
     - name: Upload Artifact
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: prcycoin-v${{ env.VERSION }}-macosx
         path: ${{ env.ARTIFACT_DIR }}
@@ -325,7 +325,7 @@ jobs:
         chmod +x $SOURCE_ARTIFACT/src/{prcycoin-cli,prcycoin-tx,prcycoind,qt/prcycoin-qt}
         mv $SOURCE_ARTIFACT/src/{prcycoin-cli,prcycoin-tx,prcycoind,qt/prcycoin-qt} $ARTIFACT_DIR
     - name: Upload Artifact
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: prcycoin-v${{ env.VERSION }}-aarch64-linux
         path: ${{ env.ARTIFACT_DIR }}
@@ -375,7 +375,7 @@ jobs:
         chmod +x $SOURCE_ARTIFACT/src/{prcycoin-cli,prcycoin-tx,prcycoind,qt/prcycoin-qt}
         mv $SOURCE_ARTIFACT/src/{prcycoin-cli,prcycoin-tx,prcycoind,qt/prcycoin-qt} $ARTIFACT_DIR
     - name: Upload Artifact
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: prcycoin-v${{ env.VERSION }}-arm32
         path: ${{ env.ARTIFACT_DIR }}
@@ -425,7 +425,7 @@ jobs:
         chmod +x $SOURCE_ARTIFACT/src/{prcycoin-cli,prcycoin-tx,prcycoind}
         mv $SOURCE_ARTIFACT/src/{prcycoin-cli,prcycoin-tx,prcycoind} $ARTIFACT_DIR
     - name: Upload Artifact
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: prcycoin-v${{ env.VERSION }}-riscv64
         path: ${{ env.ARTIFACT_DIR }}
