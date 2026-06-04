@@ -84,6 +84,18 @@ bool CWalletDB::EraseTx(uint256 hash)
     return Erase(std::make_pair(std::string("tx"), hash));
 }
 
+bool CWalletDB::EraseTxPrivateKey(const std::string& outpointKey)
+{
+    nWalletDBUpdateCounter++;
+    return Erase(std::make_pair(std::string("txpriv"), outpointKey));
+}
+
+bool CWalletDB::EraseKeyImage(const std::string& outpointKey)
+{
+    nWalletDBUpdateCounter++;
+    return Erase(std::make_pair(std::string("outpointkeyimage"), outpointKey));
+}
+
 bool CWalletDB::WriteKey(const CPubKey& vchPubKey, const CPrivKey& vchPrivKey, const CKeyMetadata& keyMeta)
 {
     nWalletDBUpdateCounter++;

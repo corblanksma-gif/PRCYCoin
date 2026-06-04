@@ -92,6 +92,8 @@ public:
 
     bool WriteTx(uint256 hash, const CWalletTx& wtx);
     bool EraseTx(uint256 hash);
+    bool EraseTxPrivateKey(const std::string& outpointKey);
+    bool EraseKeyImage(const std::string& outpointKey);
 
     bool WriteStakingStatus(bool status);
     bool ReadStakingStatus();

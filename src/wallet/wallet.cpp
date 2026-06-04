@@ -1895,15 +1895,63 @@ bool CWallet::DeleteTransactions(std::vector<uint256> &removeTxs, bool fRescan)
 
     CWalletDB walletdb(strWalletFile, "r+", false);
 
-    for (int i = 0; i < removeTxs.size(); i++) {
-        bool fRemoveFromSpends = !(mapWallet.at(removeTxs[i]).IsCoinBase());
+    for (unsigned int i = 0; i < removeTxs.size(); i++) {
+
+        std::map<uint256, CWalletTx>::iterator mit =
+            mapWallet.find(removeTxs[i]);
+
+        if (mit == mapWallet.end()) {
+
+            LogPrint(BCLog::DELETETX,
+                "DeleteTx - tx %s not found.\n",
+                removeTxs[i].ToString());
+
+            continue;
+        }
+
+        CWalletTx& wtx = mit->second;
+
+        bool fRemoveFromSpends = !(wtx.IsCoinBase());
+
         if (EraseFromWallet(removeTxs[i])) {
+
             if (fRemoveFromSpends) {
                 RemoveFromSpends(removeTxs[i]);
             }
-            LogPrint(BCLog::DELETETX,"DeleteTx - Deleting tx %s, %i.\n", removeTxs[i].ToString(),i);
+
+            //
+            // Remove keyimage + tx metadata
+            //
+            for (unsigned int vinIndex = 0;
+                 vinIndex < wtx.vin.size();
+                 vinIndex++) {
+
+                const CTxIn& txin = wtx.vin[vinIndex];
+
+                if (!txin.prevout.IsNull()) {
+
+                    std::string outpointKey =
+                        txin.prevout.hash.GetHex() +
+                        strprintf("%u", txin.prevout.n);
+
+                    walletdb.EraseKeyImage(outpointKey);
+                    walletdb.EraseTxPrivateKey(outpointKey);
+
+                    outpointToKeyImages.erase(outpointKey);
+                }
+            }
+
+            LogPrint(BCLog::DELETETX,
+                "DeleteTx - Deleting tx %s, %u.\n",
+                removeTxs[i].ToString(),
+                i);
+
         } else {
-            LogPrint(BCLog::DELETETX,"DeleteTx - Deleting tx %s failed.\n", removeTxs[i].ToString());
+
+            LogPrint(BCLog::DELETETX,
+                "DeleteTx - Deleting tx %s failed.\n",
+                removeTxs[i].ToString());
+
             return false;
         }
     }
@@ -2012,7 +2060,7 @@ bool CWallet::DeleteWalletTransactions(const CBlockIndex* pindex, bool fRescan)
                     const CTxIn& txin = pwtx->vin[i];
                     const uint256& parentHash = txin.prevout.hash;
                     const CWalletTx* parent = pwalletMain->GetWalletTx(txin.prevout.hash);
-                    if (parent != NULL && parentHash != wtxid) {
+                    if (parent != NULL) {
                         LogPrint(BCLog::DELETETX,"DeleteTx - Parent of tx %s found\n", pwtx->GetHash().ToString());
                         deleteTx = false;
                         continue;
