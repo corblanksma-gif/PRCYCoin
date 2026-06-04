@@ -1,0 +1,186 @@
+name: PRCY CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  SOURCE_ARTIFACT: source
+
+jobs:
+  create-source-distribution:
+    name: Create Source Distribution
+    runs-on: ubuntu-22.04
+
+    env:
+      ARTIFACT_DIR: source
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Create Version Variables
+        shell: bash
+        run: |
+          if [ -f version.txt ]; then
+            VERSION=$(cat version.txt | sed 's/[^0-9,.]//g')
+          else
+            VERSION="0.0.0"
+          fi
+
+          TAG=v${VERSION}
+
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "TAG=${TAG}" >> $GITHUB_ENV
+
+      - name: Append Commit Hash
+        if: github.ref != 'refs/heads/master'
+        shell: bash
+        run: |
+          VERSION=${{ env.VERSION }}-${GITHUB_SHA::7}
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - name: Print Environment
+        run: |
+          echo "VERSION=${VERSION}"
+          echo "TAG=${TAG}"
+          printenv
+
+      - name: Create Distribution Tarball
+        run: |
+          mkdir /tmp/prcy-src
+
+          rsync -a ./ /tmp/prcy-src/ \
+            --exclude=".git" \
+            --exclude="source" \
+            --exclude="prcycoin.tar.gz" \
+            --exclude="depends.tar.gz"
+
+          tar -czf prcycoin.tar.gz -C /tmp/prcy-src .
+
+      - name: Download Depends Sources
+        run: |
+          make -C depends download
+
+      - name: Create Depends Tarball
+        run: |
+          tar -czf depends.tar.gz depends
+
+      - name: Prepare Artifact
+        run: |
+          mkdir -p $ARTIFACT_DIR
+          mv prcycoin.tar.gz depends.tar.gz $ARTIFACT_DIR
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ env.SOURCE_ARTIFACT }}
+          path: ${{ env.ARTIFACT_DIR }}
+
+  build-linux:
+    name: Build Linux
+    needs: create-source-distribution
+    runs-on: ubuntu-22.04
+
+    env:
+      ARTIFACT_DIR: prcycoin-linux
+
+    steps:
+      - name: Download Source
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ env.SOURCE_ARTIFACT }}
+          path: ${{ env.SOURCE_ARTIFACT }}
+
+      - name: Extract Archives
+        working-directory: ${{ env.SOURCE_ARTIFACT }}
+        run: |
+          tar -xzf depends.tar.gz
+          tar -xzf prcycoin.tar.gz --strip-components=1
+
+      - name: Set Version
+        shell: bash
+        run: |
+          if [ -f $SOURCE_ARTIFACT/version.txt ]; then
+            VERSION=$(cat $SOURCE_ARTIFACT/version.txt | sed 's/[^0-9,.]//g')
+          else
+            VERSION="0.0.0"
+          fi
+
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - name: Install Packages
+        run: |
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            build-essential \
+            automake \
+            libtool \
+            autotools-dev \
+            pkg-config \
+            bsdmainutils \
+            curl \
+            git \
+            cmake \
+            python3 \
+            rsync \
+            libevent-dev \
+            libboost-system-dev \
+            libboost-filesystem-dev \
+            libboost-chrono-dev \
+            libboost-test-dev \
+            libboost-thread-dev \
+            libminiupnpc-dev \
+            libzmq3-dev \
+            libqrencode-dev \
+            qtbase5-dev \
+            qttools5-dev \
+            qttools5-dev-tools \
+            libprotobuf-dev \
+            protobuf-compiler
+
+      - name: Build Depends
+        working-directory: ${{ env.SOURCE_ARTIFACT }}
+        run: |
+          make -C depends -j$(nproc)
+
+      - name: Build PRCY
+        working-directory: ${{ env.SOURCE_ARTIFACT }}
+        run: |
+          ./autogen.sh
+
+          ./configure \
+            --disable-tests \
+            --disable-bench \
+            --disable-gui-tests \
+            --disable-jni \
+            --enable-upnp-default \
+            --prefix=$(realpath depends/x86_64-pc-linux-gnu)
+
+          make -j$(nproc)
+
+      - name: Prepare Build Artifact
+        run: |
+          mkdir -p $ARTIFACT_DIR
+
+          strip $SOURCE_ARTIFACT/src/prcycoind || true
+          strip $SOURCE_ARTIFACT/src/prcycoin-cli || true
+          strip $SOURCE_ARTIFACT/src/prcycoin-tx || true
+          strip $SOURCE_ARTIFACT/src/qt/prcycoin-qt || true
+
+          cp $SOURCE_ARTIFACT/src/prcycoind $ARTIFACT_DIR/
+          cp $SOURCE_ARTIFACT/src/prcycoin-cli $ARTIFACT_DIR/
+          cp $SOURCE_ARTIFACT/src/prcycoin-tx $ARTIFACT_DIR/
+
+          if [ -f $SOURCE_ARTIFACT/src/qt/prcycoin-qt ]; then
+            cp $SOURCE_ARTIFACT/src/qt/prcycoin-qt $ARTIFACT_DIR/
+          fi
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: prcycoin-v${{ env.VERSION }}-linux
+          path: ${{ env.ARTIFACT_DIR }}
